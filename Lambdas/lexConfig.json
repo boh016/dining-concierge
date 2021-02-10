@@ -1,0 +1,268 @@
+{
+  "metadata": {
+    "schemaVersion": "1.0",
+    "importType": "LEX",
+    "importFormat": "JSON"
+  },
+  "resource": {
+    "name": "ScheduleAppointment",
+    "version": "1",
+    "intents": [
+      {
+        "name": "ThankYou",
+        "version": "1",
+        "fulfillmentActivity": {
+          "type": "ReturnIntent"
+        },
+        "sampleUtterances": [
+          "Thank you",
+          "Thanks",
+          "I am appreciated",
+          "Thank you very much"
+        ],
+        "slots": [],
+        "conclusionStatement": {
+          "messages": [
+            {
+              "groupNumber": 1,
+              "contentType": "PlainText",
+              "content": "You are welcome."
+            }
+          ]
+        }
+      },
+      {
+        "name": "Greeting",
+        "version": "2",
+        "fulfillmentActivity": {
+          "type": "ReturnIntent"
+        },
+        "sampleUtterances": [
+          "Hello",
+          "Hi",
+          "Hey"
+        ],
+        "slots": [],
+        "conclusionStatement": {
+          "messages": [
+            {
+              "groupNumber": 1,
+              "contentType": "PlainText",
+              "content": "Hi there, how can I help you?"
+            }
+          ]
+        }
+      },
+      {
+        "name": "DiningSuggestions",
+        "version": "1",
+        "fulfillmentActivity": {
+          "type": "ReturnIntent"
+        },
+        "sampleUtterances": [
+          "I need some restaurant suggestions."
+        ],
+        "slots": [
+          {
+            "sampleUtterances": [],
+            "slotType": "Cuisine",
+            "slotTypeVersion": "1",
+            "obfuscationSetting": "NONE",
+            "slotConstraint": "Required",
+            "valueElicitationPrompt": {
+              "messages": [
+                {
+                  "contentType": "PlainText",
+                  "content": "What cuisine would you like to try?"
+                }
+              ],
+              "maxAttempts": 2
+            },
+            "priority": 1,
+            "name": "Cuisine"
+          },
+          {
+            "sampleUtterances": [],
+            "slotType": "AMAZON.DATE",
+            "obfuscationSetting": "NONE",
+            "slotConstraint": "Required",
+            "valueElicitationPrompt": {
+              "messages": [
+                {
+                  "contentType": "PlainText",
+                  "content": "What date?"
+                }
+              ],
+              "maxAttempts": 2
+            },
+            "priority": 4,
+            "name": "DiningDate"
+          },
+          {
+            "sampleUtterances": [],
+            "slotType": "AMAZON.TIME",
+            "obfuscationSetting": "NONE",
+            "slotConstraint": "Required",
+            "valueElicitationPrompt": {
+              "messages": [
+                {
+                  "contentType": "PlainText",
+                  "content": "What time?"
+                }
+              ],
+              "maxAttempts": 2
+            },
+            "priority": 3,
+            "name": "DiningTime"
+          },
+          {
+            "sampleUtterances": [],
+            "slotType": "AMAZON.US_CITY",
+            "obfuscationSetting": "NONE",
+            "slotConstraint": "Required",
+            "valueElicitationPrompt": {
+              "messages": [
+                {
+                  "contentType": "PlainText",
+                  "content": "What city or city area are you looking to dine in?"
+                }
+              ],
+              "maxAttempts": 2
+            },
+            "priority": 2,
+            "name": "Location"
+          },
+          {
+            "sampleUtterances": [],
+            "slotType": "AMAZON.NUMBER",
+            "obfuscationSetting": "NONE",
+            "slotConstraint": "Required",
+            "valueElicitationPrompt": {
+              "messages": [
+                {
+                  "contentType": "PlainText",
+                  "content": "How many people are in your party?"
+                }
+              ],
+              "maxAttempts": 2
+            },
+            "priority": 5,
+            "name": "NumberOfPeople"
+          },
+          {
+            "sampleUtterances": [],
+            "slotType": "AMAZON.PhoneNumber",
+            "obfuscationSetting": "NONE",
+            "slotConstraint": "Required",
+            "valueElicitationPrompt": {
+              "messages": [
+                {
+                  "contentType": "PlainText",
+                  "content": "I need your phone number so I can sed you my findings."
+                }
+              ],
+              "maxAttempts": 2
+            },
+            "priority": 6,
+            "name": "PhoneNumber"
+          }
+        ]
+      }
+    ],
+    "slotTypes": [
+      {
+        "description": "cuisine of restaurant",
+        "name": "Cuisine",
+        "version": "1",
+        "enumerationValues": [
+          {
+            "value": "greek",
+            "synonyms": [
+              "Greece"
+            ]
+          },
+          {
+            "value": "chinese",
+            "synonyms": [
+              "China"
+            ]
+          },
+          {
+            "value": "japanese",
+            "synonyms": [
+              "Japan"
+            ]
+          },
+          {
+            "value": "italian",
+            "synonyms": [
+              "Italy"
+            ]
+          },
+          {
+            "value": "american",
+            "synonyms": [
+              "America",
+              "USA"
+            ]
+          },
+          {
+            "value": "thai",
+            "synonyms": [
+              "Thailand"
+            ]
+          },
+          {
+            "value": "mexican",
+            "synonyms": [
+              "Mexico"
+            ]
+          },
+          {
+            "value": "korean",
+            "synonyms": [
+              "Korea"
+            ]
+          },
+          {
+            "value": "french",
+            "synonyms": [
+              "France"
+            ]
+          },
+          {
+            "value": "indian",
+            "synonyms": [
+              "India"
+            ]
+          }
+        ],
+        "valueSelectionStrategy": "TOP_RESOLUTION"
+      }
+    ],
+    "voiceId": "Salli",
+    "childDirected": false,
+    "locale": "en-US",
+    "idleSessionTTLInSeconds": 600,
+    "description": "Bot to book a dentist appointment",
+    "clarificationPrompt": {
+      "messages": [
+        {
+          "contentType": "PlainText",
+          "content": "I didn't understand you, what would you like me to do?"
+        }
+      ],
+      "maxAttempts": 2
+    },
+    "abortStatement": {
+      "messages": [
+        {
+          "contentType": "PlainText",
+          "content": "Sorry, I am not able to assist at this time"
+        }
+      ]
+    },
+    "detectSentiment": false,
+    "enableModelImprovements": true
+  }
+}

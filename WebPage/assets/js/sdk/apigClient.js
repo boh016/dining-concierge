@@ -86,7 +86,7 @@ apigClientFactory.newClient = function (config) {
     apigClient.chatbotPost = function (params, body, additionalParams) {
         if(additionalParams === undefined) { additionalParams = {}; }
         
-        apiGateway.core.utils.assertParametersDefined(params, ['body'], ['body']);
+        apiGateway.core.utils.assertParametersDefined(params, [], ['body']);
         
         var chatbotPostRequest = {
             verb: 'post'.toUpperCase(),
@@ -116,6 +116,42 @@ apigClientFactory.newClient = function (config) {
         
         
         return apiGatewayClient.makeRequest(chatbotOptionsRequest, authType, additionalParams, config.apiKey);
+    };
+    
+    
+    apigClient.getuserPost = function (params, body, additionalParams) {
+        if(additionalParams === undefined) { additionalParams = {}; }
+        
+        apiGateway.core.utils.assertParametersDefined(params, [], ['body']);
+        
+        var getuserPostRequest = {
+            verb: 'post'.toUpperCase(),
+            path: pathComponent + uritemplate('/getuser').expand(apiGateway.core.utils.parseParametersToObject(params, [])),
+            headers: apiGateway.core.utils.parseParametersToObject(params, []),
+            queryParams: apiGateway.core.utils.parseParametersToObject(params, []),
+            body: body
+        };
+        
+        
+        return apiGatewayClient.makeRequest(getuserPostRequest, authType, additionalParams, config.apiKey);
+    };
+    
+    
+    apigClient.getuserOptions = function (params, body, additionalParams) {
+        if(additionalParams === undefined) { additionalParams = {}; }
+        
+        apiGateway.core.utils.assertParametersDefined(params, [], ['body']);
+        
+        var getuserOptionsRequest = {
+            verb: 'options'.toUpperCase(),
+            path: pathComponent + uritemplate('/getuser').expand(apiGateway.core.utils.parseParametersToObject(params, [])),
+            headers: apiGateway.core.utils.parseParametersToObject(params, []),
+            queryParams: apiGateway.core.utils.parseParametersToObject(params, []),
+            body: body
+        };
+        
+        
+        return apiGatewayClient.makeRequest(getuserOptionsRequest, authType, additionalParams, config.apiKey);
     };
     
 

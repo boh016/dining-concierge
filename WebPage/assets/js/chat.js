@@ -1,3 +1,27 @@
+function getUrlVars() {
+	var vars = {};
+	var parts = window.location.href.replace(/[?#&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+			vars[key] = value;
+	});
+	return vars;
+}
+var token = getUrlVars()["id_token"];
+function callGetuserApi(token) {
+    // params, body, additionalParams
+    return sdk.getuserPost({}, {
+      "token": token
+    }, {});
+  }
+var user_info
+callGetuserApi(token)
+    .then((response) => {
+    console.log(response);
+    user_info = response.data})
+  user_id = "Google_108401772343171289430"
+
+
+
+
 var checkout = {};
 
 $(document).ready(function() {
@@ -25,15 +49,11 @@ $(document).ready(function() {
     }
   }
 
-  function callChatbotApi(message) {
+  function callChatbotApi(message, user_id) {
     // params, body, additionalParams
     return sdk.chatbotPost({}, {
-      messages: [{
-        type: 'unstructured',
-        unstructured: {
-          text: message
-        }
-      }]
+      "user_id": user_id,
+      "messages": message
     }, {});
   }
 
@@ -47,11 +67,11 @@ $(document).ready(function() {
     $('.message-input').val(null);
     updateScrollbar();
 
-    callChatbotApi(msg)
+    callChatbotApi(msg, user_id)
       .then((response) => {
         console.log(response);
         var data = response.data;
-
+        
         if (data.messages && data.messages.length > 0) {
           console.log('received ' + data.messages.length + ' messages');
 
