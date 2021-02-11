@@ -4,18 +4,19 @@ import boto3
 client = boto3.client('lex-runtime')
 
 def lambda_handler(event, context):
-    print(event)
-    last_user_message = event['messages'];
-
-    response = client.post_text(botName='DiningSuggestions',
+    message = event['message'];
+    user = event['user_id']
+    messages = {'messages': []}
+    response = client.post_text(botName='ScheduleAppointment',
                                 botAlias='dev',
                                 userId=user,
-                                inputText=last_user_message)
-
-    if response['message'] is not None or len(response['message']) > 0:
-        last_user_message = response['message']
-
-    return {
-        'statusCode': 200,
-        'body': json.dumps(last_user_message)
+                                inputText=message)
+    if 'message' in response.keys():
+        messages['messages'].append({'type':'unstructured', 
+                                    'unstructured': {'text':response['message']}})
+        
+    return  {
+    'statusCode': 200,
+    'data': json.dumps(messages)
     }
+

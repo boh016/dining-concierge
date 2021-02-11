@@ -13,13 +13,15 @@ function callGetuserApi(token) {
     }, {});
   }
 var user_info
+var user_id
 callGetuserApi(token)
     .then((response) => {
-    console.log(response);
-    user_info = response.data})
-  user_id = "Google_108401772343171289430"
+    user_info = response.data;
+    user_id = user_info['cognito:username']
+  })
 
-
+// added to get info
+// console.log(user_id)
 
 
 var checkout = {};
@@ -53,7 +55,7 @@ $(document).ready(function() {
     // params, body, additionalParams
     return sdk.chatbotPost({}, {
       "user_id": user_id,
-      "messages": message
+      "message": message
     }, {});
   }
 
@@ -66,17 +68,15 @@ $(document).ready(function() {
     setDate();
     $('.message-input').val(null);
     updateScrollbar();
-
+    
     callChatbotApi(msg, user_id)
       .then((response) => {
-        console.log(response);
-        var data = response.data;
-        
+        // console.log(response);
+        var data = JSON.parse(response.data.data);
+        console.log(data)
         if (data.messages && data.messages.length > 0) {
           console.log('received ' + data.messages.length + ' messages');
-
           var messages = data.messages;
-
           for (var message of messages) {
             if (message.type === 'unstructured') {
               insertResponseMessage(message.unstructured.text);
