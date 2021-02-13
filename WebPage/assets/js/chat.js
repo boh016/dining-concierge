@@ -8,6 +8,7 @@ function getUrlVars() {
 var token = getUrlVars()["id_token"];
 function callGetuserApi(token) {
     // params, body, additionalParams
+    console.log(token);
     return sdk.getuserPost({}, {
       "token": token
     }, {});
@@ -18,6 +19,9 @@ callGetuserApi(token)
     .then((response) => {
     user_info = response.data;
     user_id = user_info['cognito:username']
+    if (user_id == undefined) {
+      window.location = "https://diningconciergesy2938.auth.us-east-1.amazoncognito.com/login?client_id=1d1mb2ktfap98hgif1iigjb9fk&response_type=token&scope=aws.cognito.signin.user.admin+email+openid+phone+profile&redirect_uri=https://d2nxcqsah4ps71.cloudfront.net"
+    }
   })
 
 // added to get info
@@ -72,6 +76,7 @@ $(document).ready(function() {
     callChatbotApi(msg, user_id)
       .then((response) => {
         // console.log(response);
+        console.log(response)
         var data = JSON.parse(response.data.data);
         console.log(data)
         if (data.messages && data.messages.length > 0) {

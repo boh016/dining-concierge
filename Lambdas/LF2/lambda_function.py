@@ -3,8 +3,9 @@ from elasticsearch import Elasticsearch, RequestsHttpConnection, helpers
 from requests_aws4auth import AWS4Auth
 import boto3
 import random
-import time
+import re
 freq = 300
+BATCH_LIM = 52
 host = 'search-cc-hw1-44vuhvpon2yqqgfpqp42jmvv2m.us-east-1.es.amazonaws.com'
 region = 'us-east-1' # e.g. us-west-1
 TABLE_NAME = 'yelp-restaurants'
@@ -18,6 +19,37 @@ es = Elasticsearch(
     verify_certs = True,
     connection_class = RequestsHttpConnection
 )
+sqs = boto3.client('sqs')
+sqs_url = 'https://queue.amazonaws.com/387645926509/messageQueue.fifo'
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+table = dynamodb.Table(TABLE_NAME)
+table_users = dynamodb.Table('users')
+sns = boto3.client('sns')
+def get_sqs():
+    response = sqs.receive_message(
+            QueueUrl=sqs_url,
+            AttributeNames=[
+                'All'
+            ],
+            MaxNumberOfMessages=10,
+            MessageAttributeNames=[
+                'All'
+            ],
+            VisibilityTimeout=30,
+            WaitTimeSeconds=0
+        )
+    try:
+        messages = response['Messages']
+    except KeyError:
+        return []
+    to_return = []
+    for message in messages:
+        to_return.append({
+            'user_id': message['Attributes']['MessageGroupId'],
+            'request': json.loads(message['Body'])
+        })
+    sqs.purge_queue(QueueUrl=sqs_url)
+    return to_return
 def generate_query(categories):
     query_body = {
         "query": {
@@ -29,26 +61,86 @@ def generate_query(categories):
 def generate_queries(users):
     cates = []
     for user in users:
-        cates.append(user['categories'])
+        cates.append(user['request']['Cuisine'])
     queries = []
     for cate in cates:
         queries.extend(generate_query(cate))
     return queries
-
 def get_res_id(queries):
     responses = []
     for i in range(0, len(queries), freq):
-        responses.extend(es.msearch(body=queries[i, i+freq]))
+        responses.extend(es.msearch(body=queries[int(i): int(i+freq)])['responses'])
     recom = []
-    for rep in responses['responses']:
+    for rep in responses:
         if len(rep['hits']['hits']) == 0:
             recom.append('random')
         else:
             selection = random.choice(range(len(rep['hits']['hits'])))
             recom.append(rep['hits']['hits'][selection]['_id'])
     return recom
-
-
+def generate_recom():
+    user_quotas = get_sqs()
+    queries = generate_queries(user_quotas)
+    recoms = get_res_id(queries)
+    for quota, recom in zip(user_quotas, recoms):
+        quota['restaurant_id'] = recom
+    return user_quotas
+def generate_message_quotas():
+    user_recom = generate_recom()
+    rest_info = []
+    for i in range(0, len(user_recom), BATCH_LIM):
+        rest_info.extend(dynamodb.batch_get_item(
+            RequestItems={
+                table.name:{
+                        'Keys': [{'id': recom['restaurant_id']}for recom in user_recom[i: i+BATCH_LIM]],
+                    'AttributesToGet': ['id', 'address', 'name']
+                    }
+            }
+        )['Responses'][table.name])
+    rest_indx = {}
+    for res in rest_info:
+        rest_indx[res['id']] = {'name': res['name'], 'address': res['address']}
+    for recom in user_recom:
+        recom['restarurant_name'] = rest_indx[recom['restaurant_id']]['name']
+        recom['restarurant_address'] = ','.join(rest_indx[recom['restaurant_id']]['address'])
+    return user_recom
+def generate_message(quota):
+    toReturn = f'''Hello! 
+Here is my {quota['request']['Cuisine']} restaurant suggestion for {quota['request']['NumberOfPeople']},
+Time: {quota['request']['DiningDate']} at {quota['request']['DiningTime']},
+Restaurant: {quota['restarurant_name']},
+Address: {quota['restarurant_address']}.
+Enjoy your meal!'''
+    return toReturn
+def generate_messages(message_quotas):
+    output = [{'user_id': quota['user_id'],
+                'PhoneNumber': quota['request']['PhoneNumber'], 
+                'Message': generate_message(quota)} for \
+            quota in message_quotas]
+    return output
 
 def lambda_handler(event, context):
-    return
+    message_quotas = generate_message_quotas()
+    records = [{'user_id': quotas['user_id'], 
+    'request': {'Location': quotas['request']['Location'],
+                'Cuisine': quotas['request']['Cuisine']}}for quotas in  message_quotas]
+    messages = generate_messages(message_quotas)
+    for message in zip(messages):
+        sns.set_sms_attributes(attributes={'DefaultSMSType': 'Transactional'})
+        sns.publish(
+            PhoneNumber = "+1"+re.findall(r'(\d+)', message['PhoneNumber'])[0][-10:],
+            Message = message['Message']
+        )
+    with table_users.batch_writer() as batch:
+        for record in records:
+            batch.delete_item(
+                Key={
+                    'id': record['user_id']
+                }
+            )
+            batch.put_item(
+                Item={
+                    'id': record['user_id'],
+                    'request': record['request']
+                }
+            )
