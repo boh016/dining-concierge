@@ -1,3 +1,4 @@
+#LF0
 import json
 import boto3
 
@@ -13,7 +14,7 @@ def lambda_handler(event, context):
                                 inputText=message)
     if 'message' in response.keys():
         messages['messages'].append({'type':'unstructured', 
-                                    'unstructured': {'text':response['message']}})
+                                     'unstructured': {'text':response['message']}})
         
     return  {
     'statusCode': 200,

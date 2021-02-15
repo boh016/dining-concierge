@@ -26,7 +26,10 @@ table = dynamodb.Table(TABLE_NAME)
 table_users = dynamodb.Table('users')
 sns = boto3.client('sns')
 def get_sqs():
-    response = sqs.receive_message(
+    response = {'Messages': None}
+    messages = []
+    while 'Messages' in response.keys():
+        response = sqs.receive_message(
             QueueUrl=sqs_url,
             AttributeNames=[
                 'All'
@@ -38,10 +41,8 @@ def get_sqs():
             VisibilityTimeout=30,
             WaitTimeSeconds=0
         )
-    try:
-        messages = response['Messages']
-    except KeyError:
-        return []
+        if 'Messages' in response.keys():
+            messages.extend(response['Messages'])
     to_return = []
     for message in messages:
         to_return.append({
@@ -97,12 +98,24 @@ def generate_message_quotas():
                     }
             }
         )['Responses'][table.name])
+    num_random = len(user_recom) - len(rest_info)
+    if num_random > 0:
+        random_set = table.scan(AttributesToGet =  ['id', 'address', 'name'], Limit = num_random)['Items']
+        cur_idx = 0
+        while len(random_set) < num_random:
+            random_set.extend(random_set[cur_idx])
+            cur_idx += 1
     rest_indx = {}
     for res in rest_info:
         rest_indx[res['id']] = {'name': res['name'], 'address': res['address']}
     for recom in user_recom:
-        recom['restarurant_name'] = rest_indx[recom['restaurant_id']]['name']
-        recom['restarurant_address'] = ','.join(rest_indx[recom['restaurant_id']]['address'])
+        if recom['restaurant_id'] == 'random':
+            random_idx = random.choice(range(len(random_set)))
+            recom['restarurant_name'] = random_set[random_idx]['name']
+            recom['restarurant_address'] = ','.join(random_set[random_idx]['address'])
+        else:
+            recom['restarurant_name'] = rest_indx[recom['restaurant_id']]['name']
+            recom['restarurant_address'] = ','.join(rest_indx[recom['restaurant_id']]['address'])
     return user_recom
 def generate_message(quota):
     toReturn = f'''Hello! 
@@ -121,17 +134,20 @@ def generate_messages(message_quotas):
 
 def lambda_handler(event, context):
     message_quotas = generate_message_quotas()
+    if len(message_quotas) == 0:
+        return
     records = [{'user_id': quotas['user_id'], 
     'request': {'Location': quotas['request']['Location'],
                 'Cuisine': quotas['request']['Cuisine']}}for quotas in  message_quotas]
     messages = generate_messages(message_quotas)
-    for message in zip(messages):
+    print(messages)
+    for message in messages:
         sns.set_sms_attributes(attributes={'DefaultSMSType': 'Transactional'})
         sns.publish(
             PhoneNumber = "+1"+re.findall(r'(\d+)', message['PhoneNumber'])[0][-10:],
             Message = message['Message']
         )
-    with table_users.batch_writer() as batch:
+    with table_users.batch_writer(overwrite_by_pkeys=['id']) as batch:
         for record in records:
             batch.delete_item(
                 Key={
@@ -141,6 +157,7 @@ def lambda_handler(event, context):
             batch.put_item(
                 Item={
                     'id': record['user_id'],
-                    'request': record['request']
+                    'Cuisine': record['request']['Cuisine'],
+                    'Location': record['request']['Location']
                 }
             )

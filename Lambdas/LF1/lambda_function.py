@@ -6,8 +6,6 @@ import os
 import json
 import boto3
 import logging
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 sqs = boto3.resource('sqs')
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 table = dynamodb.Table('users')
@@ -44,7 +42,7 @@ def delegate(session_attributes, slots):
         }
     }
 def get_slot(intent_request):
-    return get_slot(intent_request)['slots']
+    return intent_request['currentIntent']['slots']
 """ --- Hard Code Intent Functions --- """
 def greeting_intent(intent_request):
     return {
@@ -59,76 +57,122 @@ def thank_you_intent(intent_request):
     return {
         'dialogAction': {
             "type": "Close",
+            'fulfillmentState': 'Fulfilled',
             'message': {
-                'fulfillmentState': 'fulfilled',
                 'contentType': 'PlainText',
                 'content': 'You are welcome!'}
         }
     }
-def confirmation_intent(location, cuisine):
-    return {
-            'dialogAction': {
-            'type': 'ConfirmIntent',
-            'intentName': 'DiningSuggestionsIntent',
-            'slots': {
-                    'Location': location,
-                    'Cuisine': cuisine
-                    },
-            'message': {
-                'contentType': 'PlainText',
-                'content':f'I detect you have a dining suggestion in my history, Do you want to reuse the Location: {location} and Cuisine {cuisine} from last time?'
-                }
-                }
-            }
 
-    
+
 
 """ --- Logic Intent Functions --- """
+def load_history_intent(intent_request):
+    source = intent_request['invocationSource']
+    if source == 'DialogCodeHook' and intent_request['currentIntent']['confirmationStatus'] == 'None':
+        resp = table.get_item(Key={'id': intent_request['userId']})
+        if 'Item' in resp.keys():
+            location,cuisine  = resp['Item']['Location'], resp['Item']['Cuisine']
+            return {
+                'sessionAttributes': intent_request['sessionAttributes'],
+                'dialogAction': {
+                        'type': 'ConfirmIntent',
+                        'intentName': 'LoadHistory',
+                        'message': {'contentType': 'PlainText',
+                                    'content': f'Do you want to user cuisine: {cuisine}, location: {location} from last time?'}
+                        }
+                    }
+        else:
+            return {
+                    'sessionAttributes': intent_request['sessionAttributes'],
+                    'dialogAction': {
+                        'type': 'ElicitSlot',
+                        'intentName': 'DiningSuggestions',
+                        'slotToElicit': 'Cuisine',
+                        'message': {'contentType': 'PlainText',
+                                    'content': 'What cuisine/food would you like to try?'}
+                        }
+                    }
+    if intent_request['currentIntent']['confirmationStatus'] == 'Confirmed':
+        resp = table.get_item(Key={'id': intent_request['userId']})
+        location,cuisine  = resp['Item']['Location'], resp['Item']['Cuisine']
+        return {
+                'sessionAttributes': intent_request['sessionAttributes'],
+                'dialogAction': {
+                    'type': 'ElicitSlot',
+                    'intentName': 'DiningSuggestions',
+                    'slots': {
+                                    'Location': location,
+                                    'Cuisine': cuisine,
+                                },
+                    'slotToElicit': 'DiningDate',
+                    'message': {'contentType': 'PlainText',
+                                'content': 'What date?'}
+                    }
+                }
+    elif intent_request['currentIntent']['confirmationStatus'] == 'Denied':
+        location, cuisine = None, None
+        return {
+                'sessionAttributes': intent_request['sessionAttributes'],
+                'dialogAction': {
+                    'type': 'ElicitSlot',
+                    'intentName': 'DiningSuggestions',
+                    'slotToElicit': 'Cuisine',
+                    'message': {'contentType': 'PlainText',
+                                'content': 'What cuisine/food would you like to try?'}
+                    }
+                }
+
+
+
+
 def dining_suggestion_intent(intent_request):
     location = get_slot(intent_request)["Location"]
     cuisine = get_slot(intent_request)["Cuisine"]
     num_people = get_slot(intent_request)["NumberOfPeople"]
-    date = get_slot(intent_request)["Date"]
-    time = get_slot(intent_request)["Time"]
+    date = get_slot(intent_request)["DiningDate"]
+    time = get_slot(intent_request)["DiningTime"]
+    phone = get_slot(intent_request)["PhoneNumber"]
     source = intent_request['invocationSource']
-    if all([i is None for i in [location, cuisine, num_people, date, time]]):
-        table_resp = table.get_item(
-            Key = {'id':intent_request['userId']}
-        )
-        if 'Item' in table_resp.keys():
-            if 'confirmationStatus' in intent_request['currentIntent'].keys():
-                if intent_request['currentIntent']['confirmationStatus'] == 'Confirmed':
-                    location = intent_request['currentIntent']['slots']['Location']
-                    cuisine = intent_request['currentIntent']['slots']['Cuisine']
-                elif intent_request['currentIntent']['confirmationStatus'] == 'Denied':
-                    pass
-                else:
-                    return confirmation_intent(location, cuisine)
-            else:
-                prev_location = table_resp['Item']['Location']
-                prev_cuisine = table_resp['Item']['Cuisine']
-                return confirmation_intent(location, cuisine)
-        else:
-            pass
     if source == 'DialogCodeHook':
-        if intent_request[
-            'sessionAttributes'] is not None:
+        if intent_request['sessionAttributes'] is not None:
             output_session_attributes = intent_request['sessionAttributes']
         else:
             output_session_attributes = {}
+        if num_people is not None:
+            num_people = int(num_people)
+            if num_people > 20 or num_people < 0:
+                return {
+                            'sessionAttributes': intent_request['sessionAttributes'],
+                            'dialogAction': {
+                                'type': 'ElicitSlot',
+                                'intentName': intent_request['currentIntent']['name'],
+                                'slots': {
+                                    'Location': location,
+                                    'Cuisine': cuisine,
+                                    'NumberOfPeople': None,
+                                    'DiningDate': date,
+                                    'DiningTime': time,
+                                    'PhoneNumber': phone
+                                },
+                                'slotToElicit': 'NumberOfPeople',
+                                'message': {'contentType': 'PlainText',
+                                            'content': 'Maximum 20 people allowed. Please Try again'}
+                            }
+                        }
         return delegate(output_session_attributes, {
             'Location': location,
             'Cuisine': cuisine,
             'NumberOfPeople': num_people,
-            'Date': date,
-            'Time': time,
+            'DiningDate': date,
+            'DiningTime': time,
+            'PhoneNumber': phone
             })
     msg = intent_request['currentIntent']['slots'].copy()
     queue = sqs.get_queue_by_name(QueueName = 'messageQueue.fifo')
     rsp = queue.send_message(MessageBody=json.dumps(msg), MessageGroupId=intent_request['userId'])
     return {
         "dialogAction": {
-        "intentName": "DiningSuggestions",
         "type": "Close",
         "fulfillmentState": "Fulfilled",
         "message": {
@@ -139,18 +183,20 @@ def dining_suggestion_intent(intent_request):
 
 """ --- Main handler --- """
 def dispatch(intent_request):
-    logger.debug('dispatch userId={}, intentName={}'.format(intent_request['userId'], get_slot(intent_request)['name']))
-    intent_name = get_slot(intent_request)['name']
-    if intent_name == 'GreetingIntent':
+    intent_name = intent_request['currentIntent']['name']
+    if intent_name == 'Greeting':
         return greeting_intent(intent_request)
-    if intent_name == 'DiningSuggestionsIntent':
+    if intent_name == 'DiningSuggestions':
         return dining_suggestion_intent(intent_request)
-    if intent_name == 'ThankYouIntent':
+    if intent_name == 'LoadHistory':
+        return load_history_intent(intent_request)
+    if intent_name == 'ThankYou':
         return thank_you_intent(intent_request)
 
 
 def lambda_handler(event, context):
+    
+    print(event)
     os.environ['TZ'] = 'America/New_York'
     time.tzset()
-    logger.debug('event.bot.name={}'.format(event['bot']['name']))
     return dispatch(event)
