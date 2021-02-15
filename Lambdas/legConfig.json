@@ -6,11 +6,11 @@
   },
   "resource": {
     "name": "ScheduleAppointment",
-    "version": "1",
+    "version": "8",
     "intents": [
       {
         "name": "ThankYou",
-        "version": "1",
+        "version": "4",
         "fulfillmentActivity": {
           "type": "ReturnIntent"
         },
@@ -21,6 +21,10 @@
           "Thank you very much"
         ],
         "slots": [],
+        "dialogCodeHook": {
+          "uri": "arn:aws:lambda:us-east-1:387645926509:function:LF1",
+          "messageVersion": "1.0"
+        },
         "conclusionStatement": {
           "messages": [
             {
@@ -33,7 +37,7 @@
       },
       {
         "name": "Greeting",
-        "version": "2",
+        "version": "5",
         "fulfillmentActivity": {
           "type": "ReturnIntent"
         },
@@ -43,6 +47,10 @@
           "Hey"
         ],
         "slots": [],
+        "dialogCodeHook": {
+          "uri": "arn:aws:lambda:us-east-1:387645926509:function:LF1",
+          "messageVersion": "1.0"
+        },
         "conclusionStatement": {
           "messages": [
             {
@@ -54,18 +62,43 @@
         }
       },
       {
-        "name": "DiningSuggestions",
-        "version": "1",
+        "name": "LoadHistory",
+        "version": "3",
         "fulfillmentActivity": {
-          "type": "ReturnIntent"
+          "codeHook": {
+            "uri": "arn:aws:lambda:us-east-1:387645926509:function:LF1",
+            "messageVersion": "1.0"
+          },
+          "type": "CodeHook"
         },
         "sampleUtterances": [
+          "I need a restaurant recommendation.",
+          "I need some restarurant recommendations",
+          "I am looking for a restarurant.",
+          "I need a restaurant suggestion.",
           "I need some restaurant suggestions."
         ],
+        "slots": [],
+        "dialogCodeHook": {
+          "uri": "arn:aws:lambda:us-east-1:387645926509:function:LF1",
+          "messageVersion": "1.0"
+        }
+      },
+      {
+        "name": "DiningSuggestions",
+        "version": "10",
+        "fulfillmentActivity": {
+          "codeHook": {
+            "uri": "arn:aws:lambda:us-east-1:387645926509:function:LF1",
+            "messageVersion": "1.0"
+          },
+          "type": "CodeHook"
+        },
+        "sampleUtterances": [],
         "slots": [
           {
             "sampleUtterances": [],
-            "slotType": "Cuisine",
+            "slotType": "foodTypes",
             "slotTypeVersion": "1",
             "obfuscationSetting": "NONE",
             "slotConstraint": "Required",
@@ -73,7 +106,7 @@
               "messages": [
                 {
                   "contentType": "PlainText",
-                  "content": "What cuisine would you like to try?"
+                  "content": "What cuisine/food would you like to try?"
                 }
               ],
               "maxAttempts": 2
@@ -95,7 +128,7 @@
               ],
               "maxAttempts": 2
             },
-            "priority": 4,
+            "priority": 3,
             "name": "DiningDate"
           },
           {
@@ -112,7 +145,7 @@
               ],
               "maxAttempts": 2
             },
-            "priority": 3,
+            "priority": 4,
             "name": "DiningTime"
           },
           {
@@ -166,78 +199,126 @@
             "priority": 6,
             "name": "PhoneNumber"
           }
-        ]
+        ],
+        "dialogCodeHook": {
+          "uri": "arn:aws:lambda:us-east-1:387645926509:function:LF1",
+          "messageVersion": "1.0"
+        },
+        "conclusionStatement": {
+          "messages": [
+            {
+              "groupNumber": 1,
+              "contentType": "PlainText",
+              "content": "You're all set. Expect my suggestion shortly! Have a good day."
+            }
+          ]
+        }
       }
     ],
     "slotTypes": [
       {
-        "description": "cuisine of restaurant",
-        "name": "Cuisine",
+        "description": "type of foods",
+        "name": "foodTypes",
         "version": "1",
         "enumerationValues": [
           {
-            "value": "greek",
-            "synonyms": [
-              "Greece"
-            ]
+            "value": "chicken"
           },
           {
-            "value": "chinese",
-            "synonyms": [
-              "China"
-            ]
+            "value": "soup"
           },
           {
-            "value": "japanese",
-            "synonyms": [
-              "Japan"
-            ]
+            "value": "fast food"
           },
           {
-            "value": "italian",
-            "synonyms": [
-              "Italy"
-            ]
+            "value": "cajun"
           },
           {
-            "value": "american",
-            "synonyms": [
-              "America",
-              "USA"
-            ]
+            "value": "sandwiches"
           },
           {
-            "value": "thai",
-            "synonyms": [
-              "Thailand"
-            ]
+            "value": "mexican"
           },
           {
-            "value": "mexican",
-            "synonyms": [
-              "Mexico"
-            ]
+            "value": "chinese"
           },
           {
-            "value": "korean",
-            "synonyms": [
-              "Korea"
-            ]
+            "value": "caribbean"
           },
           {
-            "value": "french",
-            "synonyms": [
-              "France"
-            ]
+            "value": "japanese"
           },
           {
-            "value": "indian",
-            "synonyms": [
-              "India"
-            ]
+            "value": "pizza"
+          },
+          {
+            "value": "burger"
+          },
+          {
+            "value": "sushi"
+          },
+          {
+            "value": "french"
+          },
+          {
+            "value": "hawaiian"
+          },
+          {
+            "value": "greek"
+          },
+          {
+            "value": "seafood"
+          },
+          {
+            "value": "danish"
+          },
+          {
+            "value": "bakery"
+          },
+          {
+            "value": "russian"
+          },
+          {
+            "value": "asian"
+          },
+          {
+            "value": "malaysian"
+          },
+          {
+            "value": "italian"
+          },
+          {
+            "value": "thai"
+          },
+          {
+            "value": "vegan"
+          },
+          {
+            "value": "korean"
+          },
+          {
+            "value": "ramen"
+          },
+          {
+            "value": "brazilian"
+          },
+          {
+            "value": "dessert"
+          },
+          {
+            "value": "healthy"
+          },
+          {
+            "value": "coffee"
+          },
+          {
+            "value": "breakfast"
+          },
+          {
+            "value": "indian"
           }
         ],
-        "valueSelectionStrategy": "TOP_RESOLUTION"
+        "valueSelectionStrategy": "ORIGINAL_VALUE"
       }
     ],
     "voiceId": "Salli",
